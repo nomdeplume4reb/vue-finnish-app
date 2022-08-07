@@ -102,7 +102,7 @@ export default {
     tokenizeArticleSentences(){
       const doc=nlp(String(this.articleText))
       this.sentenceBank = doc.json().map(o=> o.text)
-      // does not recognize sentence boundaries
+      // does not correctly recognize sentence boundaries
     },
     selectSentenceFromBank(){
       const sentenceIndex = _.random(0, this.sentenceBank.length-1)
