@@ -1,4 +1,4 @@
-# vue-finnish-app
+# finnish-app
 
 ## Project setup
 ```
