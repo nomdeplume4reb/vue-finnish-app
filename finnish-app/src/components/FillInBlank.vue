@@ -7,11 +7,11 @@
     </div><br />
     <form id='options-list' name='options-list'>
         <input type='radio' name='options' value='option1' id='radio1' />
-          <label htmlFor='option1'> Option1</label> <br />
+          <label htmlFor='option1'> {{ shuffledOptions[0] }}</label> <br />
         <input type='radio' name='options' value='option2' />
-          <label htmlFor='option2'> Option2</label><br />
+          <label htmlFor='option2'> {{ shuffledOptions[1] }}</label><br />
         <input type='radio' name='options' value='option3' />
-          <label htmlFor='option3'> Option3</label><br />
+          <label htmlFor='option3'> {{ shuffledOptions[2] }}</label><br />
         <input type='radio' name='options' id='invisible-option' value='invisible-option' />
           <label htmlFor='invisible-option'></label><br />
     </form><br />
@@ -26,6 +26,7 @@
 import _ from 'lodash';
 // import natural from 'natural';
 import nlp from 'compromise/one';
+import wordBank from "../wordbank.json";
 
 export default {
   name: 'FillInBlank',
@@ -40,11 +41,12 @@ export default {
       sentence: '',
       selectedWord: '',
       sentenceWithBlank: 'Select "NEXT" to get a randomly generated sentence',
+      wordBank: wordBank,
+      shuffledOptions: [],
     }
   },
   mounted () {
     this.fetchArticleId();
-
   },
   created () {
   },
@@ -66,6 +68,7 @@ export default {
       this.tokenizeArticleSentences();
       this.selectSentenceFromBank();
       this.selectWordfromSentence();
+      this.findWordForms();
       // console.log(this.sentenceBank[sentenceIndex])
       // console.log(this.randomArticleId)
     },
@@ -111,9 +114,8 @@ export default {
     },
     selectWordfromSentence(){
       // TEMPORARY SOLUTION!
-      // Real solution should use NLP library to recognize proper nouns and punctuation
+      // Real solution should use Finnish NLP library to recognize proper nouns and punctuation
 
-      //remove words with capital letters, numbers, special characters
       const doc = nlp(this.sentence).terms().json()
 
       const compare = []
@@ -136,8 +138,29 @@ export default {
       console.log(this.selectedWord)
     },
     findWordForms(){
+      // TEMPORARY SOLUTION!
+      // Real solution should use Finnish NLP library to lemmatize
 
+      let wordInfo
+      _.forEach(this.wordBank, (word) => {
+        if(_.includes(word.taivutus, this.selectedWord) || word.word == this.selectedWord){
+          wordInfo = word
+        }
+      })
+
+      if (wordInfo){
+        const options = [this.selectedWord]
+        options.push(...this.randomSample(wordInfo.taivutus, 2))
+        this.shuffledOptions = [...options].sort(() => 0.5 - Math.random());
+        console.log(this.shuffledOptions)
+      } else {
+        console.log("not found")
+      }
     },
+    randomSample(arr, num) {
+      const shuffled = [...arr].sort(() => 0.5 - Math.random());
+      return shuffled.slice(0, num);
+    }
   },
   watch: {
   }
