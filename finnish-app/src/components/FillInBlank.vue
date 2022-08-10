@@ -6,19 +6,20 @@
       <h3 id='sentence'>{{ sentenceWithBlank }}</h3>
     </div><br />
     <form id='options-list' name='options-list'>
-        <input type='radio' name='options' value='option1' id='radio1' />
-          <label htmlFor='option1'> {{ shuffledOptions[0] }}</label> <br />
-        <input type='radio' name='options' value='option2' />
-          <label htmlFor='option2'> {{ shuffledOptions[1] }}</label><br />
-        <input type='radio' name='options' value='option3' />
-          <label htmlFor='option3'> {{ shuffledOptions[2] }}</label><br />
-        <input type='radio' name='options' id='invisible-option' value='invisible-option' />
+        <input type='radio' name='options' :value="option1" v-model="selected" />
+          <label htmlFor='option1'> {{ option1 }}</label> <br />
+        <input type='radio' name='options' :value='option2' v-model="selected" />
+          <label htmlFor='option2'> {{ option2 }}</label><br />
+        <input type='radio' name='options' :value='option3' v-model="selected" />
+          <label htmlFor='option3'> {{ option3 }}</label><br />
+        <input type='radio' name='options' id='invisible-option' value='invisible-option' v-model="selected" />
           <label htmlFor='invisible-option'></label><br />
     </form><br />
-    <button class='button-check' @click='handleCheck()'>Check</button><br />
-    <p>Correct answer</p>
+    <button class='button-check' @click='handleCheck()'>Check</button><br /><br />
+    <p v-if="checking">{{ displayCheck }}</p>
     <button class='button-next' @click='handleNext()'>Next</button><br />
     <p>Score: 0 / 0</p>
+    <pre>Selected: {{selected}}</pre>
   </div>
 </template>
 
@@ -39,10 +40,15 @@ export default {
       articleText: "",
       sentenceBank: [],
       sentence: '',
-      selectedWord: '',
+      correctWord: '',
       sentenceWithBlank: 'Select "NEXT" to get a randomly generated sentence',
       wordBank: wordBank,
-      shuffledOptions: [],
+      option1: "",
+      option2: "",
+      option3: "",
+      selected: 'invisible-option',
+      displayCheck: "",
+      checking: false,
     }
   },
   mounted () {
@@ -57,7 +63,13 @@ export default {
   },
   methods: {
     handleCheck(){
-      console.log(this.randomArticleId)
+      this.checking = !this.checking;
+
+      if(this.selected == this.correctWord){
+        this.displayCheck = "Correct!"
+      } else {
+        this.displayCheck = "Nope! Try again!"
+      }
     },
     handleNext(){
       const sentenceIndex = _.random(0, this.sentenceBank.length-1)
@@ -69,6 +81,8 @@ export default {
       this.selectSentenceFromBank();
       this.selectWordfromSentence();
       this.findWordForms();
+      this.selected = 'invisible-option';
+      this.checking = false;
       // console.log(this.sentenceBank[sentenceIndex])
       // console.log(this.randomArticleId)
     },
@@ -130,12 +144,12 @@ export default {
         }
       })
 
-      this.selectedWord = tokenized[_.random(0, tokenized.length-1)]
+      this.correctWord = tokenized[_.random(0, tokenized.length-1)]
 
-      this.sentenceWithBlank = this.sentence.replace(this.selectedWord, " ____ ")
+      this.sentenceWithBlank = this.sentence.replace(this.correctWord, " ____ ")
 
       console.log(this.sentence)
-      console.log(this.selectedWord)
+      console.log(this.correctWord)
     },
     findWordForms(){
       // TEMPORARY SOLUTION!
@@ -143,15 +157,18 @@ export default {
 
       let wordInfo
       _.forEach(this.wordBank, (word) => {
-        if(_.includes(word.taivutus, this.selectedWord) || word.word == this.selectedWord){
+        if(_.includes(word.taivutus, this.correctWord) || word.word == this.correctWord){
           wordInfo = word
         }
       })
 
       if (wordInfo){
-        const options = [this.selectedWord]
+        const options = [this.correctWord]
         options.push(...this.randomSample(wordInfo.taivutus, 2))
-        this.shuffledOptions = [...options].sort(() => 0.5 - Math.random());
+        const shuffledOptions = [...options].sort(() => 0.5 - Math.random());
+        this.option1 = shuffledOptions[0];
+        this.option2 = shuffledOptions[1];
+        this.option3 = shuffledOptions[2];
         console.log(this.shuffledOptions)
       } else {
         console.log("not found")
