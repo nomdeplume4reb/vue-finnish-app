@@ -7,7 +7,7 @@
           </a>
       </div>
     </header>
-    <FillInBlank></FillInBlank>
+    <FillInBlank />
   </div>
 </template>
 
