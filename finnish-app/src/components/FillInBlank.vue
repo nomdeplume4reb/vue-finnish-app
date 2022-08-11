@@ -19,7 +19,7 @@
     <p v-if="checking">{{ displayCheck }}</p>
     <button class='button-next' @click='handleNext()'>Next</button><br />
     <p>Score: 0 / 0</p>
-    <pre>Selected: {{selected}}</pre>
+    <pre>{{wordInfo}}</pre>
   </div>
 </template>
 
@@ -43,6 +43,7 @@ export default {
       correctWord: '',
       sentenceWithBlank: 'Select "NEXT" to get a randomly generated sentence',
       wordBank: wordBank,
+      wordInfo: false,
       option1: "",
       option2: "",
       option3: "",
@@ -57,9 +58,6 @@ export default {
   created () {
   },
   computed: {
-    test(){
-      return "blarg"
-    }
   },
   methods: {
     handleCheck(){
@@ -72,6 +70,13 @@ export default {
       }
     },
     handleNext(){
+      this.searchArticleUntilWordFound();
+      this.selected = 'invisible-option';
+      this.checking = false;
+      this.wordInfo = false;
+    },
+    searchArticleUntilWordFound(){
+
       const sentenceIndex = _.random(0, this.sentenceBank.length-1)
 
       this.sentence = this.sentenceBank[sentenceIndex]
@@ -81,10 +86,7 @@ export default {
       this.selectSentenceFromBank();
       this.selectWordfromSentence();
       this.findWordForms();
-      this.selected = 'invisible-option';
-      this.checking = false;
-      // console.log(this.sentenceBank[sentenceIndex])
-      // console.log(this.randomArticleId)
+
     },
     fetchArticleId(){
         fetch(this.randomArticleReqURL, {method: "GET"})
@@ -100,12 +102,12 @@ export default {
     },
     async fetchArticleText(){
         const endpoint = this.articleReqUrlBase + this.randomArticleId
-        console.log(endpoint)
+        // fix error message when extract is not found
         await fetch(endpoint)
             .then(response => response.json())
             .then(json => {
               // console.log(JSON.stringify(json.query.pages[this.randomArticleId].extract, null, 5));
-              const extract = json.query.pages[this.randomArticleId].extract
+              const extract = json.query?.pages[this.randomArticleId]?.extract || []
               if (extract.length > 100){
                 this.articleText = extract
               } else {
@@ -147,31 +149,33 @@ export default {
       this.correctWord = tokenized[_.random(0, tokenized.length-1)]
 
       this.sentenceWithBlank = this.sentence.replace(this.correctWord, " ____ ")
-
-      console.log(this.sentence)
-      console.log(this.correctWord)
     },
     findWordForms(){
       // TEMPORARY SOLUTION!
       // Real solution should use Finnish NLP library to lemmatize
+      // also should check sentenceBank before fetching new article
 
-      let wordInfo
       _.forEach(this.wordBank, (word) => {
         if(_.includes(word.taivutus, this.correctWord) || word.word == this.correctWord){
-          wordInfo = word
+          this.wordInfo = word
         }
       })
 
-      if (wordInfo){
+      if (this.wordInfo){
         const options = [this.correctWord]
-        options.push(...this.randomSample(wordInfo.taivutus, 2))
+        options.push(...this.randomSample(this.wordInfo.taivutus, 2))
         const shuffledOptions = [...options].sort(() => 0.5 - Math.random());
         this.option1 = shuffledOptions[0];
         this.option2 = shuffledOptions[1];
         this.option3 = shuffledOptions[2];
-        console.log(this.shuffledOptions)
+        // console.log(this.shuffledOptions)
       } else {
-        console.log("not found")
+        console.log(this.correctWord, "not found")
+        this.fetchArticleId();
+        this.tokenizeArticleSentences();
+        this.selectSentenceFromBank();
+        this.selectWordfromSentence();
+        this.findWordForms();
       }
     },
     randomSample(arr, num) {
