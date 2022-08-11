@@ -108403,5 +108403,10 @@
             "jälkeläisin",
             "jälkeläisine"
         ]
+    },
+    {
+        "word": "muu",
+        "typpi": "pronomini",
+        "taivutus": ["muut","muun","muiden","muitten","muta","muita","muu","muun","muut","muussa","muissa","muusta","muista","muuhun","muihin","muulla","muilla","muulta","muilta","muulle","muille","muut","muuna","muina","muuksi","muiksi","muutta","muitta"]
     }
 ]
