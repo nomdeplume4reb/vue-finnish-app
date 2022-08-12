@@ -19,7 +19,6 @@
     <p v-if="checking">{{ displayCheck }}</p>
     <button class='button-next' @click='handleNext()'>Next</button><br />
     <p>Score: 0 / 0</p>
-    <pre>{{wordInfo}}</pre>
   </div>
 </template>
 
@@ -35,7 +34,7 @@ export default {
   data() {
     return {
       randomArticleReqURL: "https://fi.wikipedia.org/w/api.php?format=json&action=query&origin=*&generator=random",
-      randomArticleId: "",
+      randomArticleId: "5505",
       articleReqUrlBase: "https://fi.wikipedia.org/w/api.php?format=json&action=query&origin=*&prop=extracts&exintro&explaintext&redirects=1&pageids=",
       articleText: "",
       sentenceBank: [],
@@ -53,7 +52,10 @@ export default {
     }
   },
   mounted () {
-    this.fetchArticleId();
+    this.fetchArticleId()
+    // await this.fetchArticleText();
+    // this.searchArticleUntilWordFound()
+    // console.log(this.randomArticleId)
   },
   created () {
   },
@@ -82,12 +84,72 @@ export default {
       this.sentence = this.sentenceBank[sentenceIndex]
 
       this.fetchArticleId();
+      this.fetchArticleText(this.randomArticleId);
       this.tokenizeArticleSentences();
       this.selectSentenceFromBank();
       this.selectWordfromSentence();
       this.findWordForms();
 
     },
+    // async fetchArticleId(){
+    //
+    //     try {
+    //       const response = await fetch(this.randomArticleReqURL, {method: "GET"})
+    //       // console.log(response)
+    //       const json = await response.json()
+    //       // console.log(json)
+    //       this.randomArticleId = _.keys(json.query?.pages)[0];
+    //       console.log(this.randomArticleId)
+    //     } catch (err){
+    //       console.log(err)
+    //     }
+    //
+    //     // console.log(this.randomArticleId)
+    // },
+    // async fetchArticleText(articleId){
+    //     try {
+    //       const endpoint = this.articleReqUrlBase + articleId
+    //       // fix error message when extract is not found
+    //
+    //       const response = await fetch(endpoint)
+    //       const json = await response.json()
+    //
+    //       const extract = json.query?.pages[articleId]?.extract || []
+    //       if (extract.length > 100){
+    //         this.articleText = extract
+    //       } else {
+    //         this.fetchArticleId()
+    //       }
+    //       console.log(this.articleText)
+    //     } catch(error) {
+    //       console.log(error.message);
+    //     }
+    // },
+
+    async fetchArticle(){
+      try {
+        const IDresponse = await fetch(this.randomArticleReqURL, {method: "GET"})
+        const IDjson = IDresponse.json()
+        this.randomArticleId = _.keys(IDjson.query?.pages)[0];
+
+        const endpoint = this.articleReqUrlBase + this.randomArticleId
+        // fix error message when extract is not found
+
+        const response = await fetch(endpoint)
+        const json = response.json()
+
+        const extract = json.query?.pages[this.randomArticleId]?.extract || []
+        if (extract.length > 100){
+          this.articleText = extract
+        } else {
+          this.fetchArticleId()
+        }
+        console.log(this.articleText)
+      } catch(error) {
+        console.log(error.message);
+      }
+    },
+
     fetchArticleId(){
         fetch(this.randomArticleReqURL, {method: "GET"})
             .then(response => response.json())
@@ -98,16 +160,16 @@ export default {
             .catch(error => {
               console.log(error.message);
             })
-            .then(this.fetchArticleText)
+            .then(this.fetchArticleText(this.randomArticleId))
     },
-    async fetchArticleText(){
-        const endpoint = this.articleReqUrlBase + this.randomArticleId
+    async fetchArticleText(articleId){
+        const endpoint = this.articleReqUrlBase + articleId
         // fix error message when extract is not found
         await fetch(endpoint)
             .then(response => response.json())
             .then(json => {
               // console.log(JSON.stringify(json.query.pages[this.randomArticleId].extract, null, 5));
-              const extract = json.query?.pages[this.randomArticleId]?.extract || []
+              const extract = json.query?.pages[articleId]?.extract || []
               if (extract.length > 100){
                 this.articleText = extract
               } else {
@@ -121,7 +183,7 @@ export default {
     tokenizeArticleSentences(){
       const doc=nlp(String(this.articleText))
       this.sentenceBank = doc.json().map(o=> o.text)
-      // does not correctly recognize sentence boundaries
+      // does not correctly recognize sentence boundaries or nonlatin characters
     },
     selectSentenceFromBank(){
       const sentenceIndex = _.random(0, this.sentenceBank.length-1)
@@ -172,6 +234,7 @@ export default {
       } else {
         console.log(this.correctWord, "not found")
         this.fetchArticleId();
+        this.fetchArticleText(this.randomArticleId);
         this.tokenizeArticleSentences();
         this.selectSentenceFromBank();
         this.selectWordfromSentence();
