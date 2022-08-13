@@ -34,13 +34,13 @@ export default {
   data() {
     return {
       randomArticleReqURL: "https://fi.wikipedia.org/w/api.php?format=json&action=query&origin=*&generator=random",
-      randomArticleId: "5505",
+      randomArticleId: "",//"5505",
       articleReqUrlBase: "https://fi.wikipedia.org/w/api.php?format=json&action=query&origin=*&prop=extracts&exintro&explaintext&redirects=1&pageids=",
       articleText: "",
       sentenceBank: [],
       sentence: '',
       correctWord: '',
-      sentenceWithBlank: 'Select "NEXT" to get a randomly generated sentence',
+      sentenceWithBlank: '',
       wordBank: wordBank,
       wordInfo: false,
       option1: "",
@@ -51,11 +51,13 @@ export default {
       checking: false,
     }
   },
-  mounted () {
-    this.fetchArticleId()
-    // await this.fetchArticleText();
-    // this.searchArticleUntilWordFound()
-    // console.log(this.randomArticleId)
+  async mounted () {
+    console.log("mounted")
+    await this.fetchArticle();
+    this.tokenizeArticleSentences();
+    this.selectSentenceFromBank();
+    this.selectWordfromSentence();
+    this.findWordForms();
   },
   created () {
   },
@@ -72,113 +74,47 @@ export default {
       }
     },
     handleNext(){
-      this.searchArticleUntilWordFound();
-      this.selected = 'invisible-option';
-      this.checking = false;
-      this.wordInfo = false;
-    },
-    searchArticleUntilWordFound(){
-
       const sentenceIndex = _.random(0, this.sentenceBank.length-1)
 
       this.sentence = this.sentenceBank[sentenceIndex]
 
-      this.fetchArticleId();
-      this.fetchArticleText(this.randomArticleId);
+      this.fetchArticle();
       this.tokenizeArticleSentences();
       this.selectSentenceFromBank();
       this.selectWordfromSentence();
       this.findWordForms();
 
+      this.selected = 'invisible-option';
+      this.checking = false;
+      this.wordInfo = false;
     },
-    // async fetchArticleId(){
-    //
-    //     try {
-    //       const response = await fetch(this.randomArticleReqURL, {method: "GET"})
-    //       // console.log(response)
-    //       const json = await response.json()
-    //       // console.log(json)
-    //       this.randomArticleId = _.keys(json.query?.pages)[0];
-    //       console.log(this.randomArticleId)
-    //     } catch (err){
-    //       console.log(err)
-    //     }
-    //
-    //     // console.log(this.randomArticleId)
-    // },
-    // async fetchArticleText(articleId){
-    //     try {
-    //       const endpoint = this.articleReqUrlBase + articleId
-    //       // fix error message when extract is not found
-    //
-    //       const response = await fetch(endpoint)
-    //       const json = await response.json()
-    //
-    //       const extract = json.query?.pages[articleId]?.extract || []
-    //       if (extract.length > 100){
-    //         this.articleText = extract
-    //       } else {
-    //         this.fetchArticleId()
-    //       }
-    //       console.log(this.articleText)
-    //     } catch(error) {
-    //       console.log(error.message);
-    //     }
-    // },
-
     async fetchArticle(){
       try {
         const IDresponse = await fetch(this.randomArticleReqURL, {method: "GET"})
-        const IDjson = IDresponse.json()
-        this.randomArticleId = _.keys(IDjson.query?.pages)[0];
+        const IDjson = await IDresponse.json()
+        this.randomArticleId = _.keys(IDjson?.query?.pages)[0];
+
+        console.log("rai: ", this.randomArticleId)
 
         const endpoint = this.articleReqUrlBase + this.randomArticleId
         // fix error message when extract is not found
 
         const response = await fetch(endpoint)
-        const json = response.json()
+        const json = await response.json()
 
         const extract = json.query?.pages[this.randomArticleId]?.extract || []
         if (extract.length > 100){
           this.articleText = extract
+          // console.log("text: ", extract)
         } else {
-          this.fetchArticleId()
+          this.articleText = extract
+          this.fetchArticle()
+          console.log("too short")
         }
-        console.log(this.articleText)
+        // console.log("text", this.articleText)
       } catch(error) {
         console.log(error.message);
       }
-    },
-
-    fetchArticleId(){
-        fetch(this.randomArticleReqURL, {method: "GET"})
-            .then(response => response.json())
-            .then(json => {
-              // console.log(JSON.stringify(json, null, 5));
-              this.randomArticleId = _.keys(json.query.pages)[0];
-            })
-            .catch(error => {
-              console.log(error.message);
-            })
-            .then(this.fetchArticleText(this.randomArticleId))
-    },
-    async fetchArticleText(articleId){
-        const endpoint = this.articleReqUrlBase + articleId
-        // fix error message when extract is not found
-        await fetch(endpoint)
-            .then(response => response.json())
-            .then(json => {
-              // console.log(JSON.stringify(json.query.pages[this.randomArticleId].extract, null, 5));
-              const extract = json.query?.pages[articleId]?.extract || []
-              if (extract.length > 100){
-                this.articleText = extract
-              } else {
-                this.fetchArticleId()
-              }
-            })
-            .catch(error => {
-              console.log(error.message);
-            })
     },
     tokenizeArticleSentences(){
       const doc=nlp(String(this.articleText))
@@ -203,7 +139,8 @@ export default {
         compare.push(w.text)
         const word = w.text
         //remove words with capital letters, numbers; remove special characters
-        if (word[0].toString().toUpperCase() != word[0].toString() && !/\d/.test(word)){
+        //uncaught type error if word is empty string
+        if (word[0]?.toString().toUpperCase() != word[0]?.toString() && !/\d/.test(word)){
           tokenized.push(word.replace(/[.,#!$%^&*;:{}=-_`~()]/g,""))
         }
       })
@@ -233,8 +170,6 @@ export default {
         // console.log(this.shuffledOptions)
       } else {
         console.log(this.correctWord, "not found")
-        this.fetchArticleId();
-        this.fetchArticleText(this.randomArticleId);
         this.tokenizeArticleSentences();
         this.selectSentenceFromBank();
         this.selectWordfromSentence();
@@ -357,6 +292,12 @@ input[type='radio']:hover {
 }
 
 </style>
+// to do
+// does not update all options if word not found????
+// fix radio format
+// expand box size
+// not actual sentences in word blank
+// foreign characters
 
 // https://github.com/axa-group/nlp.js
 // http://naturalnode.github.io/natural/
